@@ -1,0 +1,132 @@
+=== aum-launcher design notes ===
+
+1. we want the launcher to update:
+	1. the launcher itself
+	2. the release version of aum (both the injectable and the version proxy)
+	3. optionally, the debug version of aum (both the injectable and the version proxy)
+	
+2. we want the launcher to display to the user when an update is available
+	* for the launcher, we can add build step to hash the launcher every build and append that hash to the launcher filename (the hash of the exe, not of the commit). then we retrieve this via http and compare it against our local exe's hash.
+	* for aum itself we can compare the filenames 1:1 because it's safe to assume if there's any new commit on the main branch then aum is effected.
+		* is this safe to assume though? hmmmm.. maybe we should hash the dll's too.
+
+3. we want the launcher to display to the user when the game has updated but aum has not
+	* this is a problem. when aum's version is the latest (no update available) the launcher has no way of knowing that the game is ahead.
+	* we need to be able to check the hash of the game (easy) and compare it against the hash that aum is built against (hard)
+	* aum's target hash is hardcoded into the source file, which the user won't have.
+	* one solution is to package a text file containing the target hash w/ the release
+		* the downside is that the user could modify the text file, creating hard to diagnose errors as a result.
+	* we could also hardcode it into the launcher, but this means the launcher will have to update each time aum does and i'd prefer to keep them decoupled
+	* we could store a 'gamehash' file in the root of the repository and the launcher could check this via http
+		* i like this one the best. extreme injector does the same thing. this remote check could also be moved to aum to remove the hardcoded hash there too. the only downside is that it's one more thing you have to manually update each game update.
+		
+4. the UI should never hang for more than a second (barring external issues)
+
+
+=== radical thinking ===
+what if we have the workflow runner hash the launcher and aum dll's and write this to a 'hashes' file in the root repo and push its changes?
+we'd have to change the workflow to only run on tagged releases rather than pushes (otherwise it'd be an infinite loop).
+there's still the issue of the game hash though...
+what if we scrap this whole design and go with a tighter integration w/ github's api. we can let the user select which tag to download from and we keep track of which tag is installed locally. then we just have to adjust the github workflow to use semver, annotated tagging. the annotations are for storing tag date for auto-pruning (separate feature).
+
+the semver tagging idea is probably the best, BUT, the original hashing idea isn't so bad now that i think about it.
+if we only care about the 'latest' release tag then we can get away with hashing the zip files (and appending those to the filenames, or in the release message itself).
+
+it's only an issue if we want the launcher to support downloading from feature-branches, eg; crowdsourced beta testing for features that aren't ready to be implemented into main yet. at which point the complete redesign based on tag selection and forcing tags to use semver naming would be best.
+
+yeah, tagging is the way to go for both the workflows and for the auto-update functionality.
+
+tagging allows each contributor to push freely without worry of generating a release for a broken or half-finished build. when a contributor is ready to publish their build, they simply add a semver-named tag to their commit and the workflow takes care of everything else.
+
+tagging this way also fits the launcher perfectly. the launcher can iterate all tags in the repo and allow the user to select which one they want to use. since tags and releases are linked and tags (hopefully, if we all remember) use semver-naming we can check for newer releases just by looking at the tag name.
+
+proposed tag naming scheme: feature-v1.0.0-rc
+will have to check that the automatic-releases action can parse the semver out of that first (might have to do: v1.0.0-rc-feature)
+where feature is like "event_visualization" or "HideNSeek"
+and the version portion follows semver recommendations:
+the first number is for major changes (like complete overhaul of core code)
+the second number is for updates/features/expansions (like new features being merged into main)
+the third number is for minor changes (like updating translations, fixing bugs, regenerating il2cpp scaffolding, adjusting literal values)
+-rc is to signify that it's a release candidate rather than a full release.
+
+
+=== program flow ===
+on launch:
+	1. load profile from disk if it exists, otherwise create default profile (it'll be saved to disk when launcher exits)
+	2. if profile contains game path, check that game exists at that path.
+		a. if not, check if game exe exists next to launcher
+			i. if not, prompt user with Open File dialogue to select the game exe
+			
+	3. start thread to hash game exe
+	4. start thread to hash launcher exe
+	5. start thread to 
+
+
+
+
+
+
+=== BUILDING ===
+dotnet build -r win-x86
+
+other viable options for -r flag: win10-x86, win10-x64
+	* full list: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
+
+=== PUBLISHING ===
+using a "folder publish profile" can split the build directory and the publish directory. this separation is useful for developing locally (outputs to build dir) and releasing remotely (eg; through github workflow).
+to create the publish profile in visual studio, right click the project in the solution explorer (the project not the solution), then click Publish..., then select folder publish profile and click through the prompts.
+
+dotnet publish -c Release -r win-x86 /p:PublishSingleFile=true
+	* self-contained, user doesn't have to have CLR installed. downside is that the CLR files are copied to output dir, resulting in larger size.
+dotnet publish -c Release -r win-x86 --self-contained=false /p:PublishSingleFile=true
+	* not self-contained, only outputs the packaged .exe and .pdb. should be fine for win10 users.
+	
+
+=== HASHING ===
+CertUtil -hashfile "path_to_file" MD5 | find /i /v "md5" | find /i /v "certutil"
+outputs *just* the md5 hash.
+
+hash.bat:
+@echo off 
+setlocal enableDelayedExpansion 
+set "md5="
+for /f "skip=1 tokens=* delims=" %%# in ('certutil -hashfile %1.exe MD5') do (if not defined md5 (for %%Z in (%%#) do set "md5=!md5!%%Z"))
+rename %1.exe;%1_%md5%.exe
+endlocal
+
+=== RELEASING ===
+to zip up the directory 'Publish':
+
+-name: Package Build
+ run: tar -caf Release.zip Publish
+
+to automate uploading to github releases:
+- name: Automatic Releases
+  uses: marvinpinto/action-automatic-releases@latest
+  with:
+    # GitHub secret token
+    repo_token: "${{ secrets.GITHUB_TOKEN }}"
+    # Git tag (for automatic releases)
+    automatic_release_tag: "latest"
+    prerelease: true
+    title: "Development Build"
+    # Assets to upload to the release
+    files: |
+            Release.zip
+			Release_Version.zip
+			
+			
+			
+=== GITHUB API ===
+https://docs.github.com/en/rest/reference/repos#list-releases
+	* one of the fields returned is 'browser_download_url'
+	* https://docs.github.com/en/rest/reference/repos#get-the-latest-release can also be used
+	
+https://docs.github.com/en/rest/reference/actions#list-workflow-run-artifacts
+	* one of the fields returned is 'archive_download_url'
+	* the app itself can be given the actions:read permission, so the enduser doesn't have to have a github acct, i think
+	
+https://docs.github.com/en/rest/reference/git#get-a-blob
+	* i don't know what a blob is, but maybe?
+	* supports blobs up to 100 MB in size
+	* 'content' field is base64 encoded
