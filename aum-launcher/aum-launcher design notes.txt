@@ -54,16 +54,59 @@ the third number is for minor changes (like updating translations, fixing bugs, 
 on launch:
 	1. load profile from disk if it exists, otherwise create default profile (it'll be saved to disk when launcher exits)
 	2. if profile contains game path, check that game exists at that path.
-		a. if not, check if game exe exists next to launcher
+		a. if not, check if game exe exists next to launcher or at common steam install paths
 			i. if not, prompt user with Open File dialogue to select the game exe
-			
 	3. start thread to hash game exe
-	4. start thread to hash launcher exe
-	5. start thread to 
+	4. start process watcher
+	5. fetch releases from repo via github api
+		* populate the version selector combobox
+	6. start thread to fetch all release assets of all releases and parse launcher release asset name to compare its version against ourselves
+		* proposal: launcher release asset should be named "AUMLauncher-1.0.1.exe". never pre-release.
+		* notify user if a newer version is available
 
+on selecting new AUM version:
+	1. download assets (both release.zip and debug.zip, but NOT launcher.exe) from selected release
+		* the download can be done on a worker thread
+	2. delete old assets from filesystem
+	3. write newly downloaded assets to filesystem
+		* steps 2 & 3 can be done on the worker thread's completion callback
+		* has to be done then, actually. can't delete existing assets and then have the download fail, that'd be so user unfriendly.
+		* release.zip should be extracted to mod directory + release folder
+		* debug.zip should be extracted to mod directory + debug folder
+		
+on clicking button to update launcher:
+	1. download launcher.exe asset from latest release
+		* can use same worker as above
+	2. rename existing launcher.exe to launcher_old.exe
+	3. write new launcher.exe to filesystem
+	2. spawn new, decoupled process (so no parent-child relationship)
+	3. exit old process
+	4. on startup, new launcher scans for launcher_old.exe and deletes it if found
 
+on clicking button to switch to proxy version:
+	1. update profile value
+	2. disable Inject button on main form
+	3. check if version.dll already exists in game directory (shouldn't), delete if found
+	4. copy version.dll from mod directory to game directory
+	5. disable switch to proxy button
 
-
+on clicking button to switch to inject version:
+	1. check if current profile value is proxy version AND game is currently running, fail early if true
+	2. update profile value
+	3. delete version.dll from game directory (this is why we need step 1)
+	4. enable Inject button on main form
+	5. disable switch to inject button
+	
+on clicking debug build checkbox:
+	1. switch active mod directory from release to debug or vice versa
+	
+on clicking toggle log button:
+	1. switch main form's size.y between two known constants
+	
+on form closing:
+	1. save ActiveProfile to mod directory
+	2. wait for all background workers to finish? don't think it's entirely necessary
+		* there will be critical bugs here i guarantee it
 
 
 === BUILDING ===

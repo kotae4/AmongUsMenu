@@ -57,16 +57,4 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="rtxtLog.Text" xml:space="preserve">
-    <value>[14:58:33] Launcher started
-[14:58:33] Checking for launcher updates...
-[14:58:35] Launcher is up-to-date
-[14:58:35] Checking for AUM updates...
-[14:58:37] An update is available for AUM - Release
-[14:58:37] Fetching game hash from repo...
-[14:58:37] Target game hash is 'laksdjfaiowejt198541dngnriawe'
-[14:58:39] Hashing game exe...
-[14:58:45] Local game hash is 'ngriaoituoiwaqnjito1092358412vma'
-[14:58:45] Hashes do not match, latest version of AUM does not support this local game version</value>
-  </data>
 </root>
