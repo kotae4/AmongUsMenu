@@ -4,6 +4,8 @@
 #include "game.h"
 #include "gitparams.h"
 #include "logger.h"
+#include "profiler.h"
+#include <random>
 
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
@@ -12,6 +14,98 @@ int randi(int lo, int hi) {
 	int i = rand() % n;
 	if (i < 0) i = -i;
 	return lo + i;
+}
+
+RoleRates::RoleRates(GameOptionsData__Fields gameOptionsDataFields, int playerAmount) {
+	this->ImposterCount = gameOptionsDataFields._.numImpostors;
+	auto maxImpostors = GetMaxImposterAmount(playerAmount);
+	if(this->ImposterCount > maxImpostors)
+		this->ImposterCount = maxImpostors;
+
+	auto roleRates = gameOptionsDataFields.RoleOptions->fields.roleRates;
+	if (roleRates->fields.count != 0) {
+		auto vectors = roleRates->fields.entries[0].vector;
+		for (auto iVector = 0; iVector < 32; iVector++)
+		{
+			if (vectors[iVector].key == RoleTypes__Enum::Engineer)
+			{
+				this->EngineerChance = vectors[iVector].value.Chance;
+				this->EngineerCount = vectors[iVector].value.MaxCount;
+			}
+			else if (vectors[iVector].key == RoleTypes__Enum::Scientist)
+			{
+				this->ScientistChance = vectors[iVector].value.Chance;
+				this->ScientistCount = vectors[iVector].value.MaxCount;
+			}
+			else if (vectors[iVector].key == RoleTypes__Enum::Shapeshifter)
+			{
+				this->ShapeshifterChance = vectors[iVector].value.Chance;
+				this->ShapeshifterCount = vectors[iVector].value.MaxCount;
+			}
+		}
+	}
+}
+
+int RoleRates::GetRoleCount(RoleTypes__Enum role) {
+	switch (role)
+	{
+		case RoleTypes__Enum::Shapeshifter:
+			return this->ShapeshifterCount;
+		case RoleTypes__Enum::Impostor:
+			return this->ImposterCount;
+		case RoleTypes__Enum::Scientist:
+			return this->ScientistCount;
+		case RoleTypes__Enum::Engineer:
+			return this->EngineerCount;
+		default:
+			return this->MaxCrewmates;
+	}
+}
+
+void RoleRates::SubtractRole(RoleTypes__Enum role) {
+	if (role == RoleTypes__Enum::Shapeshifter)
+	{
+		if (this->ShapeshifterCount < 1)
+			return;
+		this->ShapeshifterCount--;
+		this->ImposterCount--;
+	}
+	else if (role == RoleTypes__Enum::Impostor)
+	{
+		if (this->ImposterCount < 1)
+			return;
+		this->ImposterCount--;
+		this->ShapeshifterCount--;
+	}
+	else if (role == RoleTypes__Enum::Scientist)
+	{
+		if (this->ScientistCount < 1)
+			return;
+		this->ScientistCount--;
+	}
+	else if (role == RoleTypes__Enum::Engineer)
+	{
+		if (this->EngineerCount < 1)
+			return;
+		this->EngineerCount--;
+	}
+}
+
+int GetMaxImposterAmount(int playerAmount)
+{
+	if(playerAmount >= 9)
+		return 3;
+	if(playerAmount >= 7)
+		return 2;
+	return 1;
+}
+
+int GenerateRandomNumber(int min, int max)
+{
+	std::random_device dev;
+	std::mt19937 rng(dev());
+	std::uniform_int_distribution<std::mt19937::result_type> dist(min, max);
+	return dist(rng);
 }
 
 PlayerSelection::PlayerSelection()
@@ -376,7 +470,7 @@ const char* TranslateTaskTypes(TaskTypes__Enum taskType) {
 		"Inspect Sample", "Empty Chute", "Empty Garbage", "Align Engine Output", "Fix Wiring", "Calibrate Distributor", "Divert Power", "Unlock Manifolds", "Reset Reactor",
 		"Fix Lights", "Clean O2 Filter", "Fix Communications", "Restore Oxygen", "Stabilize Steering", "Assemble Artifact", "Sort Samples", "Measure Weather", "Enter ID Code",
 		"Buy Beverage", "Process Data", "Run Diagnostics", "Water Plants", "Monitor Oxygen", "Store Artifacts", "Fill Canisters", "Activate Weather Nodes", "Insert Keys",
-		"Reset Seismic Stabilizers", "Scan Boarding Pass", "Open Waterways", "Replace Water Jug", "Repair Drill", "Align Telecopse", "Record Temperature", "Reboot Wifi", 
+		"Reset Seismic Stabilizers", "Scan Boarding Pass", "Open Waterways", "Replace Water Jug", "Repair Drill", "Align Telecopse", "Record Temperature", "Reboot Wifi",
 		"Polish Ruby", "Reset Breakers", "Decontaminate", "Make Burger", "Unlock Safe", "Sort Records", "Put Away Pistols", "Fix Shower", "Clean Toilet", "Dress Mannequin",
 		"Pick Up Towels", "Rewind Tapes", "Start Fans", "Develop Photos", "Get Biggol Sword", "Put Away Rifles", "Stop Charles", "Vent Cleaning"};
 	return TASK_TRANSLATIONS[(uint8_t)taskType];
@@ -386,7 +480,7 @@ const char* TranslateTaskTypes(TaskTypes__Enum taskType) {
 const char* TranslateSystemTypes(SystemTypes__Enum systemType) {
 	static const char* const SYSTEM_TRANSLATIONS[] = { "Hallway", "Storage", "Cafeteria", "Reactor", "Upper Engine", "Navigation", "Admin", "Electrical", "Oxygen", "Shields",
 		"MedBay", "Security", "Weapons", "Lower Engine", "Communications", "Ship Tasks", "Doors", "Sabotage", "Decontamination", "Launchpad", "Locker Room", "Laboratory",
-		"Balcony", "Office", "Greenhouse", "Dropship", "Decontamination", "Outside", "Specimen Room", "Boiler Room", "Vault Room", "Cockpit", "Armory", "Kitchen", "Viewing Deck", 
+		"Balcony", "Office", "Greenhouse", "Dropship", "Decontamination", "Outside", "Specimen Room", "Boiler Room", "Vault Room", "Cockpit", "Armory", "Kitchen", "Viewing Deck",
 		"Hall Of Portraits", "Cargo Bay", "Ventilation", "Showers", "Engine Room", "The Brig", "Meeting Room", "Records Room", "Lounge Room", "Gap Room", "Main Hall", "Medical" };
 	return SYSTEM_TRANSLATIONS[(uint8_t)systemType];
 }
@@ -429,6 +523,12 @@ std::optional<EVENT_PLAYER> GetEventPlayerControl(PlayerControl* player)
 
 	if (!playerInfo) return std::nullopt;
 	return EVENT_PLAYER(playerInfo);
+}
+
+std::optional<Vector2> GetTargetPosition(GameData_PlayerInfo* playerInfo)
+{
+	if (!playerInfo) return std::nullopt;
+	return PlayerControl_GetTruePosition(playerInfo->fields._object, NULL);
 }
 
 std::vector<Camera*> GetAllCameras() {
@@ -593,15 +693,24 @@ void ResetOriginalAppearance()
 	State.originalColor = 0xFF;
 }
 
-GameData_PlayerOutfit* GetPlayerOutfit(GameData_PlayerInfo* player) {
+GameData_PlayerOutfit* GetPlayerOutfit(GameData_PlayerInfo* player, bool includeShapeshifted) {
 	auto arr = player->fields.Outfits->fields.entries;
-	for (int i = 0; i < player->fields.Outfits->fields.count; i++) {
+	auto outfitCount = player->fields.Outfits->fields.count;
+	GameData_PlayerOutfit* playerOutfit = NULL;
+	for (int i = 0; i < outfitCount; i++) {
 		auto kvp = arr->vector[i];
 		if (kvp.key == PlayerOutfitType__Enum::Default) {
-			return kvp.value;
+			if(playerOutfit == nullptr)
+				playerOutfit = kvp.value;
+			if(!includeShapeshifted)
+				break;
+		}
+		if (kvp.key == PlayerOutfitType__Enum::Shapeshifted && !convert_from_string(kvp.value->fields._playerName).empty()) {
+			playerOutfit = kvp.value;
+			break;
 		}
 	}
-	return 0;
+	return playerOutfit ? playerOutfit : 0;
 }
 
 bool PlayerIsImpostor(GameData_PlayerInfo* player) {
@@ -609,7 +718,7 @@ bool PlayerIsImpostor(GameData_PlayerInfo* player) {
 	if (player->fields.Role == nullptr) return false;
 
 	RoleBehaviour* role = player->fields.Role;
-	return role->fields.Role == RoleTypes__Enum::Impostor;
+	return role->fields.TeamType == RoleTeamTypes__Enum::Impostor;
 }
 
 
@@ -656,4 +765,84 @@ std::string GetRoleName(RoleBehaviour* roleBehaviour, bool abbreviated /* = fals
 		default:
 			return (abbreviated ? "Unk" : "Unknown");
 	}
+}
+
+RoleTypes__Enum GetRoleTypesEnum(RoleType role)
+{
+	if (role == RoleType::Shapeshifter) {
+		return RoleTypes__Enum::Shapeshifter;
+	}
+	else if (role == RoleType::Impostor) {
+		return RoleTypes__Enum::Impostor;
+	}
+	else if (role == RoleType::Engineer) {
+		return RoleTypes__Enum::Engineer;
+	}
+	else if (role == RoleType::Scientist) {
+		return RoleTypes__Enum::Scientist;
+	}
+	return RoleTypes__Enum::Crewmate;
+}
+
+float GetDistanceBetweenPoints_Unity(Vector2 p1, Vector2 p2)
+{
+	float dx = p1.x - p2.x, dy = p1.y - p2.y;
+	return sqrtf(dx * dx + dy * dy);
+}
+
+float GetDistanceBetweenPoints_ImGui(ImVec2 p1, ImVec2 p2)
+{
+	float dx = p1.x - p2.x, dy = p1.y - p2.y;
+	return sqrtf(dx * dx + dy * dy);
+}
+
+void DoPolylineSimplification(std::vector<ImVec2>& inPoints, std::vector<std::chrono::system_clock::time_point>& inTimeStamps, std::vector<ImVec2>& outPoints, std::vector<std::chrono::system_clock::time_point>& outTimeStamps, float sqDistanceThreshold, bool clearInputs)
+{
+	sqDistanceThreshold = sqDistanceThreshold - FLT_EPSILON;
+	size_t numPendingPoints = inPoints.size();
+	if (numPendingPoints < 2)
+		return;
+
+	Profiler::BeginSample("PolylineSimplification");
+	ImVec2 prevPoint = inPoints[0], point = inPoints[0];
+	std::chrono::system_clock::time_point timestamp = inTimeStamps[0];
+	size_t numNewPointsAdded = 0;
+
+	// always add the first point
+	outPoints.push_back(point);
+	outTimeStamps.push_back(timestamp);
+	numNewPointsAdded++;
+	for (size_t index = 1; index < numPendingPoints; index++)
+	{
+		point = inPoints[index];
+		timestamp = inTimeStamps[index];
+		float diffX = point.x - prevPoint.x, diffY = point.y - prevPoint.y;
+		if ((diffX * diffX + diffY * diffY) >= sqDistanceThreshold)
+		{
+			prevPoint = point;
+			// add the point if it's beyond the distance threshold of prev point.
+			outPoints.push_back(point);
+			outTimeStamps.push_back(timestamp);
+			numNewPointsAdded++;
+		}
+	}
+	// add the last point if it's not also the first point nor has already been added as the last point
+	if ((point.x != prevPoint.x) && (point.y != prevPoint.y))
+	{
+		outPoints.push_back(point);
+		outTimeStamps.push_back(timestamp);
+		numNewPointsAdded++;
+	}
+
+	if (clearInputs)
+	{
+		inPoints.clear();
+		inTimeStamps.clear();
+	}
+	Profiler::EndSample("PolylineSimplification");
+}
+
+float getMapXOffsetSkeld(float x)
+{
+	return (State.mapType == Settings::MapType::Ship && State.FlipSkeld) ? x - 50.0f : x;
 }

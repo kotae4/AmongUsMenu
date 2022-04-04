@@ -8,6 +8,7 @@
 #include "keybinds.h"
 #include "menu.hpp"
 #include "radar.hpp"
+#include "replay.hpp"
 #include "esp.hpp"
 #include "state.hpp"
 #include "theme.hpp"
@@ -16,6 +17,7 @@
 #include "resource_data.h"
 #include "game.h"
 #include "console.hpp"
+#include "profiler.h"
 
 #include <future>
 
@@ -32,6 +34,7 @@ HANDLE DirectX::hRenderSemaphore;
 constexpr DWORD MAX_RENDER_THREAD_COUNT = 5; //Should be overkill for our purposes
 
 std::vector<MapTexture> maps = std::vector<MapTexture>();
+std::unordered_map<ICON_TYPES, IconTexture> icons;
 
 typedef struct Cache
 {
@@ -65,6 +68,11 @@ static bool CanDrawRadar()
 	return IsInGame() && State.ShowRadar && (!State.InMeeting || !State.HideRadar_During_Meetings);
 }
 
+static bool CanDrawReplay()
+{
+    return IsInGame() && State.ShowReplay;
+}
+
 LRESULT __stdcall dWndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     if (!State.ImGuiInitialized)
         return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
@@ -83,6 +91,7 @@ LRESULT __stdcall dWndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     if (KeyBinds::IsKeyPressed(State.KeyBinds.Toggle_Zoom) && IsInGame()) State.EnableZoom = !State.EnableZoom;
     if (KeyBinds::IsKeyPressed(State.KeyBinds.Toggle_Freecam) && IsInGame()) State.FreeCam = !State.FreeCam;
     if (KeyBinds::IsKeyPressed(State.KeyBinds.Close_Current_Room_Door) && IsInGame()) State.rpcQueue.push(new RpcCloseDoorsOfType(GetSystemTypes(GetTrueAdjustedPosition(*Game::pLocalPlayer)), false));
+    if (KeyBinds::IsKeyPressed(State.KeyBinds.Toggle_Replay)) State.ShowReplay = !State.ShowReplay;
 
     return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
 }
@@ -114,6 +123,17 @@ bool ImGuiInitialization(IDXGISwapChain* pSwapChain) {
         maps.push_back({ D3D11Image(Resource(IDB_PNG3), pDevice), 8.F, 21.F, 10.F });
         maps.push_back({ D3D11Image(Resource(IDB_PNG4), pDevice), 162.F, 107.F, 6.F });
 
+        icons.insert({ ICON_TYPES::VENT_IN, { D3D11Image(Resource(IDB_PNG5), pDevice), 0.02f }});
+        icons.insert({ ICON_TYPES::VENT_OUT, { D3D11Image(Resource(IDB_PNG6), pDevice), 0.02f }});
+        icons.insert({ ICON_TYPES::KILL, { D3D11Image(Resource(IDB_PNG7), pDevice), 0.02f } });
+        icons.insert({ ICON_TYPES::REPORT, { D3D11Image(Resource(IDB_PNG8), pDevice), 0.02f } });
+        icons.insert({ ICON_TYPES::TASK, { D3D11Image(Resource(IDB_PNG9), pDevice), 0.02f } });
+        icons.insert({ ICON_TYPES::PLAYER, { D3D11Image(Resource(IDB_PNG10), pDevice), 0.02f } });
+        icons.insert({ ICON_TYPES::CROSS, { D3D11Image(Resource(IDB_PNG11), pDevice), 0.02f } });
+        icons.insert({ ICON_TYPES::DEAD, { D3D11Image(Resource(IDB_PNG12), pDevice), 0.02f } });
+        icons.insert({ ICON_TYPES::PLAY, { D3D11Image(Resource(IDB_PNG13), pDevice), 0.55f } });
+        icons.insert({ ICON_TYPES::PAUSE, { D3D11Image(Resource(IDB_PNG14), pDevice), 0.55f } });
+
         DirectX::hRenderSemaphore = CreateSemaphore(
             NULL,                                 // default security attributes
             MAX_RENDER_THREAD_COUNT,              // initial count
@@ -143,6 +163,11 @@ HRESULT __stdcall dPresent(IDXGISwapChain* __this, UINT SyncInterval, UINT Flags
             ReleaseSemaphore(DirectX::hRenderSemaphore, 1, NULL);
             return oPresent(__this, SyncInterval, Flags);
         }
+    }
+
+    if (!Profiler::HasInitialized)
+    {
+        Profiler::InitProfiling();
     }
 
     WaitForSingleObject(DirectX::hRenderSemaphore, INFINITE);
@@ -197,6 +222,11 @@ HRESULT __stdcall dPresent(IDXGISwapChain* __this, UINT SyncInterval, UINT Flags
 	{
 		ImGuiRenderer::Submit([]() { Radar::Render(); });
 	}
+
+    if (CanDrawReplay())
+    {
+        ImGuiRenderer::Submit([]() { Replay::Render(); });
+    }
 
     // Render in a separate thread
 	std::async(std::launch::async, ImGuiRenderer::ExecuteQueue);

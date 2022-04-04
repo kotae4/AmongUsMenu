@@ -37,10 +37,18 @@ namespace RadarTab {
 			if (ImGui::Checkbox("Hide Radar During Meetings", &State.HideRadar_During_Meetings)) {
 				State.Save();
 			}
+			if (ImGui::Checkbox("Draw Player Icons", &State.RadarDrawIcons)) {
+				State.Save();
+			}
 			if (ImGui::Checkbox("Lock Radar Position", &State.LockRadar)) {
 				State.Save();
 			}
-			if (ImGui::ColorEdit4("Radar Color", (float*)&State.SelectedColor, ImGuiColorEditFlags__OptionsDefault | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreview)) {
+			if (ImGui::ColorEdit4("Radar Color",
+				(float*)&State.SelectedColor,
+				ImGuiColorEditFlags__OptionsDefault
+				| ImGuiColorEditFlags_NoInputs
+				| ImGuiColorEditFlags_AlphaBar
+				| ImGuiColorEditFlags_AlphaPreview)) {
 				State.Save();
 			}
 

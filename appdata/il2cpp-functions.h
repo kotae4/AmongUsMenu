@@ -6,6 +6,12 @@ DO_APP_FUNC(Type*, Type_GetType, (String* typeName, MethodInfo* method), "mscorl
 
 DO_APP_FUNC(GameObject*, Component_get_gameObject, (Component_1* __this, MethodInfo* method), "UnityEngine.CoreModule, UnityEngine.GameObject UnityEngine.Component::get_gameObject()");
 DO_APP_FUNC(Transform*, Component_get_transform, (Component_1* __this, MethodInfo* method), "UnityEngine.CoreModule, UnityEngine.Transform UnityEngine.Component::get_transform()");
+
+DO_APP_FUNC(void, Object_DestroyImmediate, (Object_1* obj, MethodInfo* method), "UnityEngine.CoreModule, System.Void UnityEngine.Object::DestroyImmediate(UnityEngine.Object)");
+DO_APP_FUNC(Component_1*, Component_GetComponent, (Component_1* __this, Type* type, MethodInfo* method), "UnityEngine.CoreModule, UnityEngine.Component UnityEngine.Component::GetComponent(System.Type)");
+
+DO_APP_FUNC(Transform*, GameObject_get_transform, (GameObject* __this, MethodInfo* method), "UnityEngine.CoreModule, UnityEngine.Transform UnityEngine.GameObject::get_transform()");
+DO_APP_FUNC(Transform*, Transform_GetRoot, (Transform* __this, MethodInfo* method), "UnityEngine.CoreModule, UnityEngine.Transform UnityEngine.Transform::GetRoot()");
 DO_APP_FUNC(String*, Component_get_tag, (Component_1* __this, MethodInfo* method), "UnityEngine.CoreModule, System.String UnityEngine.Component::get_tag()");
 DO_APP_FUNC(void, GameObject_set_layer, (GameObject* __this, int32_t value, MethodInfo* method), "UnityEngine.CoreModule, System.Void UnityEngine.GameObject::set_layer(System.Int32)");
 DO_APP_FUNC(int32_t, GameObject_get_layer, (GameObject* __this, MethodInfo* method), "UnityEngine.CoreModule, System.Int32 UnityEngine.GameObject::get_layer()");
@@ -25,6 +31,7 @@ DO_APP_FUNC(Camera*, Camera_get_main, (MethodInfo* method), "UnityEngine.CoreMod
 DO_APP_FUNC(void, Camera_set_orthographicSize, (Camera* __this, float value, MethodInfo* method), "UnityEngine.CoreModule, System.Void UnityEngine.Camera::set_orthographicSize(System.Single)");
 DO_APP_FUNC(float, Camera_get_orthographicSize, (Camera* __this, MethodInfo* method), "UnityEngine.CoreModule, System.Single UnityEngine.Camera::get_orthographicSize()");
 DO_APP_FUNC(Color, SpriteRenderer_get_color, (SpriteRenderer* __this, MethodInfo* method), "UnityEngine.CoreModule, UnityEngine.Color UnityEngine.SpriteRenderer::get_color()");
+DO_APP_FUNC(float, Time_get_fixedDeltaTime, (MethodInfo* method), "UnityEngine.CoreModule, System.Single UnityEngine.Time::get_fixedDeltaTime()");
 
 DO_APP_FUNC(int32_t, Screen_get_width, (MethodInfo* method), "UnityEngine.CoreModule, System.Int32 UnityEngine.Screen::get_width()");
 DO_APP_FUNC(int32_t, Screen_get_height, (MethodInfo* method), "UnityEngine.CoreModule, System.Int32 UnityEngine.Screen::get_height()");
@@ -60,6 +67,8 @@ DO_APP_FUNC(void, MainMenuManager_Start, (MainMenuManager* __this, MethodInfo* m
 DO_APP_FUNC(void, MeetingHud_Awake, (MeetingHud* __this, MethodInfo* method), "Assembly-CSharp, System.Void MeetingHud::Awake()");
 DO_APP_FUNC(void, MeetingHud_Close, (MeetingHud* __this, MethodInfo* method), "Assembly-CSharp, System.Void MeetingHud::Close()");
 DO_APP_FUNC(void, MeetingHud_Update, (MeetingHud* __this, MethodInfo* method), "Assembly-CSharp, System.Void MeetingHud::Update()");
+DO_APP_FUNC(void, MeetingHud_BloopAVoteIcon, (MeetingHud* __this, GameData_PlayerInfo* voterPlayer, int index, Transform* parent, MethodInfo* method), "Assembly-CSharp, System.Void MeetingHud::BloopAVoteIcon(GameData.PlayerInfo, System.Int32, UnityEngine.Transform)");
+DO_APP_FUNC(void, MeetingHud_PopulateResults, (MeetingHud* __this, void* states, MethodInfo* method), "Assembly-CSharp, System.Void MeetingHud::PopulateResults(MeetingHud.VoterState[])");
 
 DO_APP_FUNC(void, MovingPlatformBehaviour_SetSide, (MovingPlatformBehaviour* __this, bool isLeft, MethodInfo* method), "Assembly-CSharp, System.Void MovingPlatformBehaviour::SetSide(System.Boolean)");
 
@@ -91,6 +100,8 @@ DO_APP_FUNC(void, PlayerControl_HandleRpc, (PlayerControl* __this, uint8_t callI
 DO_APP_FUNC(void, PlayerControl_RpcSetPet, (PlayerControl* __this, String* petId, MethodInfo* method), "Assembly-CSharp, System.Void PlayerControl::RpcSetPet(System.String)");
 DO_APP_FUNC(void, PlayerControl_RpcSetSkin, (PlayerControl* __this, String* skinId, MethodInfo* method), "Assembly-CSharp, System.Void PlayerControl::RpcSetSkin(System.String)");
 DO_APP_FUNC(void, PlayerControl_RpcSetHat, (PlayerControl* __this, String* hatId, MethodInfo* method), "Assembly-CSharp, System.Void PlayerControl::RpcSetHat(System.String)");
+DO_APP_FUNC(void, PlayerControl_RpcSetVisor, (PlayerControl* __this, String* visorId, MethodInfo* method), "Assembly-CSharp, System.Void PlayerControl::RpcSetVisor(System.String)");
+DO_APP_FUNC(void, PlayerControl_RpcSetNamePlate, (PlayerControl* __this, String* namePlateId, MethodInfo* method), "Assembly-CSharp, System.Void PlayerControl::RpcSetNamePlate(System.String)");
 DO_APP_FUNC(bool, PlayerControl_RpcSendChat, (PlayerControl* __this, String* message, MethodInfo* method), "Assembly-CSharp, System.Boolean PlayerControl::RpcSendChat(System.String)");
 DO_APP_FUNC(void, PlayerControl_Shapeshift, (PlayerControl* __this, PlayerControl* target, bool animate, MethodInfo* method), "Assembly-CSharp, System.Void PlayerControl::Shapeshift(PlayerControl, System.Boolean)");
 DO_APP_FUNC(void, PlayerControl_ProtectPlayer, (PlayerControl* __this, PlayerControl* target, int32_t colorId, MethodInfo* method), "Assembly-CSharp, System.Void PlayerControl::ProtectPlayer(PlayerControl, System.Int32)");
@@ -181,8 +192,11 @@ DO_APP_FUNC(void, TextMeshPro_SetOutlineColor, (TextMeshPro* __this, Color32 col
 DO_APP_FUNC(void, TMP_Text_set_text, (TMP_Text* __this, String* value, MethodInfo* method), "Unity.TextMeshPro, System.Void TMPro.TMP_Text::set_text(System.String)");
 DO_APP_FUNC(Color32, Color32_op_Implicit, (Color c, MethodInfo* method), "UnityEngine.CoreModule, UnityEngine.Color32 UnityEngine.Color32::op_Implicit(UnityEngine.Color)");
 
+DO_APP_FUNC(void, RoleManager_SelectRoles, (RoleManager* __this, MethodInfo* method), "Assembly-CSharp, System.Void RoleManager::SelectRoles()");
 DO_APP_FUNC(void, RoleManager_AssignRolesForTeam, (List_1_GameData_PlayerInfo_* players, RoleOptionsData* opts, RoleTeamTypes__Enum team, int32_t teamMax, Nullable_1_RoleTypes_ defaultRole, MethodInfo* method), "Assembly-CSharp, System.Void RoleManager::AssignRolesForTeam(System.Collections.Generic.List<GameData.PlayerInfo>, RoleOptionsData, RoleTeamTypes, System.Int32, System.Nullable<RoleTypes>)");
 DO_APP_FUNC(void, RoleManager_AssignRolesFromList, (List_1_GameData_PlayerInfo_* players, int32_t teamMax, List_1_RoleTypes_* roleList, int32_t* rolesAssigned, MethodInfo* method), "Assembly-CSharp, System.Void RoleManager::AssignRolesFromList(System.Collections.Generic.List<GameData.PlayerInfo>, System.Int32, System.Collections.Generic.List<RoleTypes>, System.Int32&)");
 DO_APP_FUNC(void, InnerNetClient_EnqueueDisconnect, (InnerNetClient* __this, DisconnectReasons__Enum reason, String* stringReason, MethodInfo* method), "Assembly-CSharp, System.Void InnerNet.InnerNetClient::EnqueueDisconnect(DisconnectReasons, System.String)");
 
 DO_APP_FUNC(void, PlayerPhysics_FixedUpdate, (PlayerPhysics* __this, MethodInfo* method), "Assembly-CSharp, System.Void PlayerPhysics::FixedUpdate()");
+
+DO_APP_FUNC(bool, SaveManager_GetPurchase, (String* itemKey, String* bundleKey, MethodInfo* method), "Assembly-CSharp, System.Boolean SaveManager::GetPurchase(System.String, System.String)");

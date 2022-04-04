@@ -4,20 +4,23 @@
 #include "_events.h"
 #include "_rpc.h"
 #include "keybinds.h"
+#include "game.h"
+#include "replay.hpp"
 
 class Settings {
 public:
 
     KeyBinds::Config KeyBinds = {
-        VK_DELETE,
-        VK_INSERT,
-        VK_HOME,
-        VK_END,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00
+        VK_DELETE, // toggle menu
+        VK_INSERT, // toggle radar
+        VK_HOME, // toggle console
+        VK_NEXT, // repair sabotage
+        0x00, // noclip
+        0x00, // close all doors
+        0x00, // toggle zoom
+        0x00, // toggle freecam
+        0x00, // close current room door
+        VK_END // toggle replay
     };
 
     bool ImGuiInitialized = false;
@@ -34,6 +37,8 @@ public:
     float PlayerSpeed = 1.f;
     bool UnlockVents = false;
     bool ShowGhosts = false;
+
+    bool RevealVotes = false;
 
     bool RevealRoles = false;
     bool AbbreviatedRoleNames = false;
@@ -60,6 +65,7 @@ public:
     bool HideRadar_During_Meetings = false;
     bool ShowRadar_RightClick_Teleport = false;
     bool LockRadar = false;
+    bool RadarDrawIcons = true;
 
     bool ShowEsp = false;
     bool ShowEsp_Ghosts = true;
@@ -81,18 +87,37 @@ public:
     bool CloseAllDoors = false;
 
     bool ShowConsole = false;
-    std::vector<EventInterface*> consoleEvents;
-    std::vector<EventInterface*> events[15][EVENT_TYPES_SIZE];
+    bool ShowReplay = false;
+    bool Replay_ShowOnlyLastSeconds = false;
+    int Replay_LastSecondsValue = 1;
+    bool Replay_ClearAfterMeeting = false;
+    std::chrono::system_clock::time_point MatchStart;
+    std::chrono::system_clock::time_point MatchCurrent;
+    std::chrono::system_clock::time_point MatchEnd;
+    std::chrono::system_clock::time_point MatchLive;
+    // NOTE:
+    // any code that modifies State.rawEvents or State.liveReplayEvents or any other collection should use the Replay.replayEventMutex
+    // failure to do so will invalidate any existing iterator of any thread which will lead to rare and hard to diagnose crashes
+    std::vector<std::unique_ptr<EventInterface>> rawEvents;
+    std::vector<std::unique_ptr<EventInterface>> liveReplayEvents;
+    std::vector<ImVec2> lastWalkEventPosPerPlayer;
+    std::map<int, Replay::WalkEvent_LineData> replayWalkPolylineByPlayer;
+    bool Replay_IsPlaying = true;
+    bool Replay_IsLive = true;
 
-    std::bitset<0xFF> voteMonitor;
+    std::map<uint8_t, uint8_t> voteMonitor;
 
     std::vector<int32_t> aumUsers;
     int32_t rpcCooldown = 15;
     int32_t playerKilledId = 0;
 
-    std::vector<PlayerControl*> impostors = { nullptr, nullptr, nullptr };
+    std::vector<PlayerControl*> assignedRolesPlayer = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+    std::vector<int> assignedRoles = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     int mapHostChoice = -1;
     int impostors_amount = 0;
+    int shapeshifters_amount = 0;
+    int engineers_amount = 0;
+    int scientists_amount = 0;
 
     bool Wallhack = false;
     bool FreeCam = false;
@@ -105,11 +130,14 @@ public:
     bool FakeCameraUsage = false;
 
     ImVec4 SelectedColor = ImVec4(1.f, 1.f, 1.f, 0.75f);
+    ImVec4 SelectedReplayMapColor = ImVec4(1.f, 1.f, 1.f, 0.75f);
 
 	int SelectedColorId = 0;
     std::string originalName = "-";
+    String* originalNamePlate = nullptr;
     String* originalSkin = nullptr;
     String* originalHat = nullptr;
+    String* originalVisor = nullptr;
     String* originalPet = nullptr;
     uint8_t originalColor = 0xFF;
 
@@ -126,7 +154,7 @@ public:
     bool ShowUnityLogs = true;
 
     int LobbyTimer = -1;
-    
+
     std::string userName = "";
 
     enum MapType : uint8_t
@@ -134,11 +162,18 @@ public:
         Ship = 0,
         Hq = 1,
         Pb = 2,
-        Airship = 3,
-        NotSet = 0xFF
+        Airship = 3
     } mapType;
 
     bool AutoOpenDoors = false;
+
+    Settings()
+    {
+        for (int plyIdx = 0; plyIdx < MAX_PLAYERS; plyIdx++)
+        {
+            this->lastWalkEventPosPerPlayer.push_back(ImVec2(0.f, 0.f));
+        }
+    }
 
     void Load();
     void Save();

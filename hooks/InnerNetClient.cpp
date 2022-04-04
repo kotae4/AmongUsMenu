@@ -5,6 +5,8 @@
 #include "game.h"
 #include "logger.h"
 #include "utility.h"
+#include "replay.hpp"
+#include "profiler.h"
 #include <sstream>
 
 void dInnerNetClient_Update(InnerNetClient* __this, MethodInfo* method)
@@ -47,7 +49,6 @@ void dInnerNetClient_Update(InnerNetClient* __this, MethodInfo* method)
 
         if (!IsInLobby()) {
             State.selectedPlayer = PlayerSelection();
-            State.FlipSkeld = false;
             State.NoClip = false;
             State.HotkeyNoClip = false;
             State.originalName = "-";
@@ -56,9 +57,24 @@ void dInnerNetClient_Update(InnerNetClient* __this, MethodInfo* method)
     else {
         if (!State.rpcQueue.empty()) {
             auto rpc = State.rpcQueue.front();
-            State.rpcQueue.pop();
-
-            rpc->Process();
+            //Looks like there is a check on Task completion when u are dead.
+            //The maximum amount of Tasks that can be completed per Update is at 6.
+            auto maxProcessedTasks = 6;
+			auto processedTaskCompletes = 0;
+			if (dynamic_cast<RpcCompleteTask*>(rpc))
+			{
+				if (processedTaskCompletes < maxProcessedTasks)
+				{
+					State.rpcQueue.pop();
+					rpc->Process();
+					processedTaskCompletes++;
+				}
+			}
+			else
+			{
+				State.rpcQueue.pop();
+				rpc->Process();
+			}
             delete rpc;
         }
 
@@ -116,8 +132,9 @@ void dAmongUsClient_OnPlayerLeft(AmongUsClient* __this, ClientData* data, Discon
         if (it != State.aumUsers.end())
             State.aumUsers.erase(it);
 
-        State.events[data->fields.Character->fields.PlayerId][EVENT_DISCONNECT].push_back(new DisconnectEvent(GetEventPlayer(data->fields.Character->fields._cachedData).value()));
-        State.consoleEvents.push_back(new DisconnectEvent(GetEventPlayer(data->fields.Character->fields._cachedData).value()));
+        std::lock_guard<std::mutex> replayLock(Replay::replayEventMutex);
+        State.rawEvents.push_back(std::make_unique<DisconnectEvent>(GetEventPlayer(data->fields.Character->fields._cachedData).value()));
+        State.liveReplayEvents.push_back(std::make_unique<DisconnectEvent>(GetEventPlayer(data->fields.Character->fields._cachedData).value()));
     }
 
     AmongUsClient_OnPlayerLeft(__this, data, reason, method);
@@ -134,7 +151,7 @@ bool bogusTransformSnap(PlayerSelection player, Vector2 newPosition)
         return false; //For some reason the playercontroller is not marked dead at this point, so we check what layer the player is on
     auto currentPosition = PlayerControl_GetTruePosition(player.get_PlayerControl(), NULL);
     int32_t distanceToTarget = Vector2_Distance(currentPosition, newPosition, NULL); //rounding off as the smallest kill distance is zero
-    auto killDistance = std::clamp((*Game::pGameOptionsData)->fields.KillDistance, 0, 2);
+    auto killDistance = std::clamp((*Game::pGameOptionsData)->fields._.killDistance, 0, 2);
     auto initialSpawnLocation = GetSpawnLocation(player.get_PlayerControl()->fields.PlayerId, (*Game::pGameData)->fields.AllPlayers->fields._size, true);
     auto meetingSpawnLocation = GetSpawnLocation(player.get_PlayerControl()->fields.PlayerId, (*Game::pGameData)->fields.AllPlayers->fields._size, false);
     if (Equals(initialSpawnLocation, newPosition)) return false;
@@ -180,10 +197,14 @@ void dCustomNetworkTransform_SnapTo(CustomNetworkTransform* __this, Vector2 posi
 void dInnerNetClient_StartEndGame(InnerNetClient* __this, MethodInfo* method) {
     State.aumUsers.clear();
 
-    State.consoleEvents.clear();
-    for (int i = 0; i < 10; i++)
-        for (int j = 0; j < EVENT_TYPES_SIZE; j++)
-            State.events[i][j].clear();
+    std::lock_guard<std::mutex> replayLock(Replay::replayEventMutex);
+    Replay::Reset();
+
+    for (auto& e : State.rawEvents)
+        e.reset();
+    State.rawEvents.clear();
+
+    State.MatchEnd = std::chrono::system_clock::now();
 
     InnerNetClient_StartEndGame(__this, method);
 }

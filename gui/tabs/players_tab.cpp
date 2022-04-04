@@ -14,8 +14,10 @@ namespace PlayersTab {
 			if (ImGui::BeginTabItem("Players")) {
 				ImGui::BeginChild("players#list", ImVec2(200, 0), true);
 				ImGui::ListBoxHeader("", ImVec2(200, 150));
+				auto localData = GetPlayerData(*Game::pLocalPlayer);
 				for (auto playerData : GetAllPlayerData()) {
-					if (playerData->fields.Disconnected) continue;
+					if (playerData->fields.Disconnected)
+						continue;
 
 					std::string playerName = convert_from_string(GetPlayerOutfit(playerData)->fields._playerName);
 					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
@@ -30,26 +32,22 @@ namespace PlayersTab {
 					ImGui::Dummy(ImVec2(0, 0));
 					ImGui::SameLine();
 
-					ImVec4 nameColor;
-					if (State.RevealRoles && false /* who the imposter is is no longer being sent to the client */)
-						nameColor = AmongUsColorToImVec4(Palette__TypeInfo->static_fields->ImpostorRed);
-					else if (PlayerSelection(playerData).is_LocalPlayer() || std::count(State.aumUsers.begin(), State.aumUsers.end(), playerData->fields.PlayerId))
-						nameColor = AmongUsColorToImVec4(Palette__TypeInfo->static_fields->Orange);
-					else
-						nameColor = AmongUsColorToImVec4(Palette__TypeInfo->static_fields->White);
-
-					if (playerData->fields.IsDead) nameColor = AmongUsColorToImVec4(Palette__TypeInfo->static_fields->DisabledGrey);
-
+					ImVec4 nameColor = AmongUsColorToImVec4(Palette__TypeInfo->static_fields->White);
 					if (State.RevealRoles)
 					{
 						std::string roleName = GetRoleName(playerData->fields.Role);
-						std::string playerNameWithRole = playerName + "(" + roleName + ")";
-						ImGui::TextColored(nameColor, playerNameWithRole.c_str());
+						playerName = playerName + " (" + roleName + ")";
+						nameColor = AmongUsColorToImVec4(GetRoleColor(playerData->fields.Role));
 					}
-					else
-					{
-						ImGui::TextColored(nameColor, playerName.c_str());
-					}
+					else if(PlayerIsImpostor(localData) && PlayerIsImpostor(playerData))
+						nameColor = AmongUsColorToImVec4(Palette__TypeInfo->static_fields->ImpostorRed);
+					else if (PlayerSelection(playerData).is_LocalPlayer() || std::count(State.aumUsers.begin(), State.aumUsers.end(), playerData->fields.PlayerId))
+						nameColor = AmongUsColorToImVec4(Palette__TypeInfo->static_fields->Orange);
+
+					if (playerData->fields.IsDead)
+						nameColor = AmongUsColorToImVec4(Palette__TypeInfo->static_fields->DisabledGrey);
+
+					ImGui::TextColored(nameColor, playerName.c_str());
 				}
 				ImGui::ListBoxFooter();
 
@@ -90,6 +88,8 @@ namespace PlayersTab {
 							queue->push(new RpcSetPet(State.originalPet));
 							queue->push(new RpcSetSkin(State.originalSkin));
 							queue->push(new RpcSetHat(State.originalHat));
+							queue->push(new RpcSetVisor(State.originalVisor));
+							queue->push(new RpcSetNamePlate(State.originalNamePlate));
 							queue->push(new RpcSetName(State.originalName));
 							State.activeImpersonation = false;
 						}
@@ -97,7 +97,7 @@ namespace PlayersTab {
 				}
 				if (State.selectedPlayer.has_value())
 				{
-					if (IsInGame() && !GetPlayerData(*Game::pLocalPlayer)->fields.IsDead) {
+					if (IsInGame() && !GetPlayerData(*Game::pLocalPlayer)->fields.IsDead && State.selectedPlayer.get_PlayerData()->fields.IsDead) {
 						ImGui::NewLine();
 						if (ImGui::Button("Report Body")) {
 							State.rpcQueue.push(new RpcReportPlayer(State.selectedPlayer));
@@ -138,7 +138,9 @@ namespace PlayersTab {
 								auto petId = GetPlayerOutfit(State.selectedPlayer.get_PlayerData())->fields.PetId;
 								auto skinId = GetPlayerOutfit(State.selectedPlayer.get_PlayerData())->fields.SkinId;
 								auto hatId = GetPlayerOutfit(State.selectedPlayer.get_PlayerData())->fields.HatId;
+								auto visorId = GetPlayerOutfit(State.selectedPlayer.get_PlayerData())->fields.VisorId;
 								auto colorId = GetPlayerOutfit(State.selectedPlayer.get_PlayerData())->fields.ColorId;
+								auto namePlateId = GetPlayerOutfit(State.selectedPlayer.get_PlayerData())->fields.NamePlateId;
 								std::queue<RPCInterface*>* queue = nullptr;
 
 								if (IsInGame())
@@ -153,7 +155,9 @@ namespace PlayersTab {
 										queue->push(new RpcSetColor(GetRandomColorId()));
 									queue->push(new RpcSetPet(petId));
 									queue->push(new RpcSetSkin(skinId));
+									queue->push(new RpcSetVisor(visorId));
 									queue->push(new RpcSetHat(hatId));
+									queue->push(new RpcSetNamePlate(namePlateId));
 									ImpersonateName(State.selectedPlayer);
 									State.activeImpersonation = true;
 								}
@@ -162,7 +166,8 @@ namespace PlayersTab {
 					}
 
 					if (IsInGame() && PlayerIsImpostor(GetPlayerData(*Game::pLocalPlayer)) && !State.selectedPlayer.get_PlayerData()->fields.IsDead
-						&& !GetPlayerData(*Game::pLocalPlayer)->fields.IsDead && ((*Game::pLocalPlayer)->fields.killTimer <= 0.0f))
+						&& !GetPlayerData(*Game::pLocalPlayer)->fields.IsDead && ((*Game::pLocalPlayer)->fields.killTimer <= 0.0f)
+						&& !State.selectedPlayer.get_PlayerControl()->fields.protectedByGuardian)
 					{
 						if (ImGui::Button("Kill Player"))
 						{

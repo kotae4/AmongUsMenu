@@ -18,6 +18,31 @@ enum MapType {
 	MAP_AIRSHIP = 3
 };
 
+enum RoleType
+{
+	Random = 0,
+	Crewmate = 1,
+	Scientist = 2,
+	Engineer = 3,
+	Impostor = 4,
+	Shapeshifter = 5,
+};
+
+class RoleRates {
+public:
+	int ImposterCount = 0;
+	int ShapeshifterCount = 0;
+	int ShapeshifterChance = 0;
+	int ScientistCount = 0;
+	int ScientistChance = 0;
+	int EngineerCount = 0;
+	int EngineerChance = 0;
+	int MaxCrewmates = 15;
+	RoleRates(GameOptionsData__Fields gameOptionsDataFields, int playerAmount);
+	int GetRoleCount(RoleTypes__Enum role);
+	void SubtractRole(RoleTypes__Enum role);
+};
+
 class PlayerSelection {
 	bool hasValue;
 	int32_t clientId;
@@ -84,6 +109,8 @@ bool IsInLobby();
 bool IsHost();
 bool IsInGame();
 bool IsInMultiplayerGame();
+int GetMaxImposterAmount(int playerAmount);
+int GenerateRandomNumber(int min, int max);
 GameData_PlayerInfo* GetPlayerData(PlayerControl* player);
 Vector2 GetTrueAdjustedPosition(PlayerControl* player);
 GameData_PlayerInfo* GetPlayerDataById(uint8_t id);
@@ -108,6 +135,7 @@ SystemTypes__Enum GetSystemTypes(Vector2 vector);
 // some C++ wizardry to allow overloading on pointer types w/ different base type (then we can rename both to just GetEventPlayer)
 std::optional<EVENT_PLAYER> GetEventPlayer(GameData_PlayerInfo* playerInfo);
 std::optional<EVENT_PLAYER> GetEventPlayerControl(PlayerControl* player);
+std::optional<Vector2> GetTargetPosition(GameData_PlayerInfo* playerInfo);
 std::vector<Camera*> GetAllCameras();
 std::vector<ClientData*> GetAllClients();
 Vector2 GetSpawnLocation(int playerId, int numPlayer, bool initialSpawn);
@@ -122,6 +150,22 @@ int GetRandomColorId();
 void SaveOriginalAppearance();
 void ResetOriginalAppearance();
 bool PlayerIsImpostor(GameData_PlayerInfo* player);
-GameData_PlayerOutfit* GetPlayerOutfit(GameData_PlayerInfo* player);
+GameData_PlayerOutfit* GetPlayerOutfit(GameData_PlayerInfo* player, bool includeShapeshifted = false);
 Color GetRoleColor(RoleBehaviour* roleBehaviour);
 std::string GetRoleName(RoleBehaviour* roleBehaviour, bool abbreviated = false);
+RoleTypes__Enum GetRoleTypesEnum(RoleType role);
+float GetDistanceBetweenPoints_Unity(Vector2 p1, Vector2 p2);
+float GetDistanceBetweenPoints_ImGui(ImVec2 p1, ImVec2 p2);
+
+/// <summary>
+/// Simplifies a list of points by ensuring the distance between consecutive points is greater than the squared distance threshold; all other points are discarded.
+/// </summary>
+/// <param name="inPoints">Collection of points pending simplification</param>
+/// <param name="inTimeStamps">Collection of timestamps associated with each point pending simplification</param>
+/// <param name="outPoints">Contains only the points that meet the distance filter</param>
+/// <param name="outTimeStamps">The original timestamp associated with each point</param>
+/// <param name="sqDistanceThreshold">The squared distance between two consecutive points. We use squared distance to avoid a costly sqrtf operation in the distance calculation</param>
+/// <param name="clearInputs">Whether both input collections should be cleared after processing. If no work is done they will not be cleared.</param>
+void DoPolylineSimplification(std::vector<ImVec2>& inPoints, std::vector<std::chrono::system_clock::time_point>& inTimeStamps, std::vector<ImVec2>& outPoints, std::vector<std::chrono::system_clock::time_point>& outTimeStamps, float sqDistanceThreshold, bool clearInputs);
+
+float getMapXOffsetSkeld(float x);

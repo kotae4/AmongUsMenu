@@ -70,9 +70,6 @@
     <ClCompile Include="hooks\GameOptionsData.cpp">
       <Filter>hooks</Filter>
     </ClCompile>
-    <ClCompile Include="hooks\HatManager.cpp">
-      <Filter>hooks</Filter>
-    </ClCompile>
     <ClCompile Include="hooks\HudManager.cpp">
       <Filter>hooks</Filter>
     </ClCompile>
@@ -268,6 +265,9 @@
     <ClCompile Include="events\ProtectPlayerEvent.cpp">
       <Filter>events</Filter>
     </ClCompile>
+    <ClInclude Include="hooks\RoleManager.hpp">
+      <Filter>hooks</Filter>
+    </ClInclude>
     <ClCompile Include="hooks\RoleManager.cpp">
       <Filter>hooks</Filter>
     </ClCompile>
@@ -276,6 +276,18 @@
     </ClCompile>
     <ClCompile Include="rpc\RpcSetRole.cpp">
       <Filter>rpc</Filter>
+    </ClCompile>
+    <ClCompile Include="gui\replay.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="gui\tabs\replay_tab.cpp">
+      <Filter>gui\tabs</Filter>
+    </ClCompile>
+    <ClCompile Include="profiler.cpp">
+      <Filter>user</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveManager.cpp">
+      <Filter>hooks</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -438,14 +450,24 @@
     <ClInclude Include="user\logger.h">
       <Filter>user</Filter>
     </ClInclude>
-    <ClInclude Include="user\gitparams.h">
-      <Filter>user</Filter>
-    </ClInclude>
     <ClInclude Include="gui\console.hpp">
       <Filter>gui</Filter>
     </ClInclude>
     <ClInclude Include="events\_events.h">
       <Filter>events</Filter>
+    </ClInclude>
+    <ClInclude Include="user\achievements.hpp">
+      <Filter>user</Filter>
+    </ClInclude>
+    <ClInclude Include="gitparams.h" />
+    <ClInclude Include="gui\replay.hpp">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\tabs\replay_tab.h">
+      <Filter>gui\tabs</Filter>
+    </ClInclude>
+    <ClInclude Include="profiler.h">
+      <Filter>user</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -459,6 +481,36 @@
       <Filter>resources</Filter>
     </Image>
     <Image Include="resources\airship.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\vent_in.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\vent_out.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\kill.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\report.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\tick.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\player.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\cross.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\dead_body.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\play.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\pause.png">
       <Filter>resources</Filter>
     </Image>
   </ItemGroup>

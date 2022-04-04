@@ -6,6 +6,7 @@
 #include "tabs/host_tab.h"
 #include "tabs/players_tab.h"
 #include "tabs/radar_tab.h"
+#include "tabs/replay_tab.h"
 #include "tabs/esp_tab.h"
 #include "tabs/sabotage_tab.h"
 #include "tabs/self_tab.h"
@@ -18,11 +19,7 @@
 
 namespace Menu {
 	void Init() {
-#ifdef _DEBUG
-		ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_Once);
-#else
-		ImGui::SetNextWindowSize(ImVec2(440, 300), ImGuiCond_Once);
-#endif
+		ImGui::SetNextWindowSize(ImVec2(520, 320), ImGuiCond_Once);
 		ImGui::SetNextWindowBgAlpha(1.F);
 	}
 
@@ -40,6 +37,7 @@ namespace Menu {
 		GameTab::Render();
 		SelfTab::Render();
 		RadarTab::Render();
+		ReplayTab::Render();
 		EspTab::Render();
 		PlayersTab::Render();
 		TasksTab::Render();
